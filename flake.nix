@@ -14,19 +14,20 @@
       devShells = rec {
         minimal = pkgs.mkShell {
           name = "java";
-          buildInputs = [
-            pkgs.jdk21
+          buildInputs = with pkgs; [
+            jdk17
+            graphviz
           ];
-          shellHook = ''
-            export GRADLE_USER_HOME="$PWD/gradle-cache";
-          '';
+          # shellHook = ''
+          #   export GRADLE_USER_HOME="$PWD/gradle-cache";
+          # '';
         };
 
-        with-jdt = minimal.overrideAttrs (finalAttrs: previousAttrs: {
+        with_jdt = minimal.overrideAttrs (finalAttrs: previousAttrs: {
           buildInputs = previousAttrs.buildInputs ++ [ pkgs.jdt-language-server ];
         });
 
-        default = minimal;
+        default = with_jdt;
       };
     });
 }
