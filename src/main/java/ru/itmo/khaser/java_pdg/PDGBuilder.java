@@ -16,9 +16,8 @@ public class PDGBuilder {
     private final List<PDGEdge> edges;
     private int nodeIdCounter;
     private final Map<Pair<Statement, Position>, PDGNode> stmtToNode;
-    private final Map<String, List<PDGNode>> varToDefNodes;
-    private final Map<Statement, Set<String>> stmtToVarsUsed;
-    private final Map<Statement, Set<String>> stmtToVarsDefined;
+    private final Map<PDGNode, Set<String>> nodeToVarsUsed;
+    private final Map<PDGNode, Set<String>> nodeToVarsDefined;
 
     class CFGContext {
         final PDGNode cont;
@@ -39,9 +38,8 @@ public class PDGBuilder {
         this.edges = new ArrayList<>();
         this.nodeIdCounter = 0;
         this.stmtToNode = new HashMap<>();
-        this.varToDefNodes = new HashMap<>();
-        this.stmtToVarsUsed = new HashMap<>();
-        this.stmtToVarsDefined = new HashMap<>();
+        this.nodeToVarsUsed = new HashMap<>();
+        this.nodeToVarsDefined = new HashMap<>();
     }
 
     public PDG build() {
@@ -134,11 +132,12 @@ public class PDGBuilder {
             node.reachable = true;
         }
         if (stmt instanceof ExpressionStmt) {
+            analyzeVariableUsage(node, stmt);
             addControlEdge(node, ctx.cont);
-            analyzeVariableUsage(stmt, node);
             return true;
         } else if (stmt instanceof IfStmt) {
             var if_stmt = (IfStmt) stmt;
+            analyzeVariableUsage(node, if_stmt.getCondition());
             Statement then_stmt = if_stmt.getThenStmt();
             var new_ctx = new CFGContext(ctx.cont, ctx.curLoopNode, ctx.contForCurLoopNode, ctx.methodExit);
             boolean ret = processStatement(then_stmt, new_ctx);
@@ -153,15 +152,18 @@ public class PDGBuilder {
             return ret;
         } else if (stmt instanceof WhileStmt) {
             var while_stmt = (WhileStmt) stmt;
+            analyzeVariableUsage(node, while_stmt.getCondition());
             Statement body = while_stmt.getBody();
             var new_ctx = new CFGContext(node, node, ctx.cont, ctx.methodExit);
             addControlEdge(node, ctx.cont);
             processStatement(body, new_ctx);
             return true;
+        // TODO: support for statement
         // } else if (stmt instanceof ForStmt) {
         //     processForStmt((ForStmt) stmt, ctx);
         } else if (stmt instanceof ReturnStmt) {
             addControlEdge(node, ctx.methodExit);
+            analyzeVariableUsage(node, stmt);
             return false;
         } else if (stmt instanceof BlockStmt) {
             return processBlockStmt((BlockStmt) stmt, ctx);
@@ -212,16 +214,12 @@ public class PDGBuilder {
     //     processStatement(body, forNode);
     // }
 
-    private void analyzeVariableUsage(Statement stmt, PDGNode node) {
+    private void analyzeVariableUsage(PDGNode node, Node stmt) {
         Set<String> usedVars = extractUsedVariables(stmt);
         Set<String> definedVars = extractDefinedVariables(stmt);
 
-        stmtToVarsUsed.put(stmt, usedVars);
-        stmtToVarsDefined.put(stmt, definedVars);
-
-        for (String var : definedVars) {
-            varToDefNodes.computeIfAbsent(var, k -> new ArrayList<>()).add(node);
-        }
+        nodeToVarsUsed.put(node, usedVars);
+        nodeToVarsDefined.put(node, definedVars);
     }
 
     private Set<String> extractUsedVariables(Node node) {
@@ -244,18 +242,6 @@ public class PDGBuilder {
             }
         });
 
-        // Unary expressions (++, --)
-        node.findAll(UnaryExpr.class).forEach(unary -> {
-            if (unary.getOperator() == UnaryExpr.Operator.PREFIX_INCREMENT ||
-                unary.getOperator() == UnaryExpr.Operator.PREFIX_DECREMENT ||
-                unary.getOperator() == UnaryExpr.Operator.POSTFIX_INCREMENT ||
-                unary.getOperator() == UnaryExpr.Operator.POSTFIX_DECREMENT) {
-                if (unary.getExpression() instanceof NameExpr) {
-                    vars.add(((NameExpr) unary.getExpression()).getNameAsString());
-                }
-            }
-        });
-
         return vars;
     }
 
@@ -265,26 +251,70 @@ public class PDGBuilder {
     }
 
     private void addDataEdge(PDGNode source, PDGNode target, String varName) {
+        if (source == target) return;
         edges.add(new PDGEdge(source, target, PDGEdge.EdgeType.DATA, varName));
     }
 
     private void addDataDependencies() {
-        for (Map.Entry<Statement, Set<String>> entry : stmtToVarsUsed.entrySet()) {
-            Statement stmt = entry.getKey();
-            Set<String> usedVars = entry.getValue();
-            PDGNode targetNode = stmtToNode(stmt);
+        Map<PDGNode, List<PDGNode>> adjacencyList = new HashMap<>();
+        for (PDGNode node : nodes) {
+            adjacencyList.put(node, new ArrayList<>());
+        }
+        for (PDGEdge edge : edges) {
+            if (edge.type == PDGEdge.EdgeType.CONTROL) {
+                adjacencyList.get(edge.source).add(edge.target);
+            }
+        }
 
-            if (targetNode == null) continue;
+        // For each variable, find all definitions and uses
+        Map<String, List<PDGNode>> varToDefNodes = new HashMap<>();
+        Map<String, List<PDGNode>> varToUseNodes = new HashMap<>();
+        for (Map.Entry<PDGNode, Set<String>> entry : nodeToVarsDefined.entrySet()) {
+            PDGNode node = entry.getKey();
+            for (String var : entry.getValue()) {
+                varToDefNodes.computeIfAbsent(var, k -> new ArrayList<>()).add(node);
+            }
+        }
+        for (Map.Entry<PDGNode, Set<String>> entry : nodeToVarsUsed.entrySet()) {
+            PDGNode node = entry.getKey();
+            for (String var : entry.getValue()) {
+                varToUseNodes.computeIfAbsent(var, k -> new ArrayList<>()).add(node);
+            }
+        }
 
-            for (String var : usedVars) {
-                List<PDGNode> defNodes = varToDefNodes.get(var);
-                if (defNodes != null) {
-                    for (PDGNode defNode : defNodes) {
-                        addDataEdge(defNode, targetNode, var);
+        // For each definition, find all reachable uses of the same variable
+        for (String var : varToDefNodes.keySet()) {
+            List<PDGNode> defNodes = varToDefNodes.get(var);
+            List<PDGNode> useNodes = varToUseNodes.getOrDefault(var, new ArrayList<>());
+
+            for (PDGNode defNode : defNodes) {
+                Set<PDGNode> reachable = findReachableNodes(defNode, adjacencyList);
+                for (PDGNode useNode : useNodes) {
+                    if (reachable.contains(useNode)) {
+                        addDataEdge(defNode, useNode, var);
                     }
                 }
             }
         }
+    }
+
+    private Set<PDGNode> findReachableNodes(PDGNode start, Map<PDGNode, List<PDGNode>> adjacencyList) {
+        Set<PDGNode> reachable = new HashSet<>();
+        Queue<PDGNode> queue = new LinkedList<>();
+        queue.add(start);
+        reachable.add(start);
+
+        while (!queue.isEmpty()) {
+            PDGNode current = queue.poll();
+            for (PDGNode neighbor : adjacencyList.get(current)) {
+                if (!reachable.contains(neighbor)) {
+                    reachable.add(neighbor);
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        return reachable;
     }
 }
 

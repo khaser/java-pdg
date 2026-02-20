@@ -20,11 +20,6 @@ public class DotExporter {
         sb.append("\n");
 
         for (PDGEdge edge : pdg.edges) {
-            // TODO: workaround
-            if (edge.type == PDGEdge.EdgeType.DATA) {
-                continue;
-            }
-
             sb.append("  ").append(nodeId(edge.source));
             sb.append(" -> ");
             sb.append(nodeId(edge.target));
@@ -36,7 +31,7 @@ public class DotExporter {
                 //     sb.append(": ").append(escapeLabel(edge.label));
                 // }
             } else {
-                sb.append("data: ").append(escapeLabel(edge.label));
+                sb.append(escapeLabel(edge.label));
             }
 
             sb.append("\"");

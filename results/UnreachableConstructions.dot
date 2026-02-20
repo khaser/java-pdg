@@ -24,5 +24,11 @@ digraph PDG {
   node7 -> node4 [label="", color=blue];
   node9 -> node12 [label="", color=blue];
   node12 -> node1 [label="", color=blue];
+  node2 -> node5 [label="result", color=red, style=dashed];
+  node2 -> node12 [label="result", color=red, style=dashed];
+  node5 -> node12 [label="result", color=red, style=dashed];
+  node3 -> node4 [label="i", color=red, style=dashed];
+  node3 -> node5 [label="i", color=red, style=dashed];
+  node3 -> node6 [label="i", color=red, style=dashed];
 }
 
