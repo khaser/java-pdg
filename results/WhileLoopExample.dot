@@ -1,0 +1,30 @@
+digraph PDG {
+  rankdir=TB;
+  node [shape=box];
+
+  node0 [label="ENTRY: whileLoopExample(int)"];
+  node1 [label="int result = 1"];
+  node2 [label="int i = 1"];
+  node3 [label="while (i <= n)"];
+  node4 [label="result = result * i"];
+  node5 [label="i = i + 1"];
+  node6 [label="return result"];
+
+  node0 -> node1 [label="ctrl", color=blue];
+  node0 -> node2 [label="ctrl", color=blue];
+  node0 -> node3 [label="ctrl", color=blue];
+  node3 -> node4 [label="ctrl", color=blue];
+  node3 -> node5 [label="ctrl", color=blue];
+  node0 -> node6 [label="ctrl", color=blue];
+  node2 -> node3 [label="data: i", color=red, style=dashed];
+  node5 -> node3 [label="data: i", color=red, style=dashed];
+  node1 -> node4 [label="data: result", color=red, style=dashed];
+  node4 -> node4 [label="data: result", color=red, style=dashed];
+  node2 -> node4 [label="data: i", color=red, style=dashed];
+  node5 -> node4 [label="data: i", color=red, style=dashed];
+  node2 -> node5 [label="data: i", color=red, style=dashed];
+  node5 -> node5 [label="data: i", color=red, style=dashed];
+  node1 -> node6 [label="data: result", color=red, style=dashed];
+  node4 -> node6 [label="data: result", color=red, style=dashed];
+}
+

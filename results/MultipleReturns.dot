@@ -1,0 +1,24 @@
+digraph PDG {
+  rankdir=TB;
+  node [shape=box];
+
+  node0 [label="ENTRY: multipleReturns()"];
+  node1 [label="int a = 1"];
+  node2 [label="int b = 5"];
+  node3 [label="if (a < b)"];
+  node4 [label="return a + b"];
+  node5 [label="return a * b"];
+
+  node0 -> node1 [label="ctrl", color=blue];
+  node0 -> node2 [label="ctrl", color=blue];
+  node0 -> node3 [label="ctrl", color=blue];
+  node3 -> node4 [label="ctrl", color=blue];
+  node3 -> node5 [label="ctrl", color=blue];
+  node1 -> node3 [label="data: a", color=red, style=dashed];
+  node2 -> node3 [label="data: b", color=red, style=dashed];
+  node1 -> node5 [label="data: a", color=red, style=dashed];
+  node2 -> node5 [label="data: b", color=red, style=dashed];
+  node1 -> node4 [label="data: a", color=red, style=dashed];
+  node2 -> node4 [label="data: b", color=red, style=dashed];
+}
+

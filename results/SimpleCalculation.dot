@@ -1,0 +1,19 @@
+digraph PDG {
+  rankdir=TB;
+  node [shape=box];
+
+  node0 [label="ENTRY: simpleCalculation()"];
+  node1 [label="int a = 1"];
+  node2 [label="int b = 5"];
+  node3 [label="int sum = a + b"];
+  node4 [label="return sum"];
+
+  node0 -> node1 [label="ctrl", color=blue];
+  node0 -> node2 [label="ctrl", color=blue];
+  node0 -> node3 [label="ctrl", color=blue];
+  node0 -> node4 [label="ctrl", color=blue];
+  node3 -> node4 [label="data: sum", color=red, style=dashed];
+  node1 -> node3 [label="data: a", color=red, style=dashed];
+  node2 -> node3 [label="data: b", color=red, style=dashed];
+}
+

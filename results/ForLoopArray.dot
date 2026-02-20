@@ -1,0 +1,25 @@
+digraph PDG {
+  rankdir=TB;
+  node [shape=box];
+
+  node0 [label="ENTRY: forLoopArray(int[])"];
+  node1 [label="int sum = 0"];
+  node2 [label="for (...)"];
+  node3 [label="int value = arr[i]"];
+  node4 [label="sum = sum + value"];
+  node5 [label="return sum"];
+
+  node0 -> node1 [label="ctrl", color=blue];
+  node0 -> node2 [label="ctrl", color=blue];
+  node2 -> node3 [label="ctrl", color=blue];
+  node2 -> node4 [label="ctrl", color=blue];
+  node0 -> node5 [label="ctrl", color=blue];
+  node2 -> node2 [label="data: i", color=red, style=dashed];
+  node2 -> node3 [label="data: i", color=red, style=dashed];
+  node1 -> node4 [label="data: sum", color=red, style=dashed];
+  node4 -> node4 [label="data: sum", color=red, style=dashed];
+  node3 -> node4 [label="data: value", color=red, style=dashed];
+  node1 -> node5 [label="data: sum", color=red, style=dashed];
+  node4 -> node5 [label="data: sum", color=red, style=dashed];
+}
+
