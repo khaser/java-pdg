@@ -1,10 +1,12 @@
 package ru.itmo.khaser.java_pdg;
 
+import com.github.javaparser.Position;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.*;
+import com.github.javaparser.utils.Pair;
 
 import java.util.*;
 
@@ -13,7 +15,7 @@ public class PDGBuilder {
     private final List<PDGNode> nodes;
     private final List<PDGEdge> edges;
     private int nodeIdCounter;
-    private final Map<Statement, PDGNode> stmtToNode;
+    private final Map<Pair<Statement, Position>, PDGNode> stmtToNode;
     private final Map<String, List<PDGNode>> varToDefNodes;
     private final Map<Statement, Set<String>> stmtToVarsUsed;
     private final Map<Statement, Set<String>> stmtToVarsDefined;
@@ -90,7 +92,7 @@ public class PDGBuilder {
             addControlEdge(while_node, body_node);
             return while_node;
         } else {
-            return createNode(stmt, stmt.toString().trim());
+            return createNode(stmt, stmt.getBegin().get().line + ": " + stmt.toString().trim());
         }
         //     // TODO
         // } else if (stmt instanceof BreakStmt) {
@@ -101,7 +103,7 @@ public class PDGBuilder {
         PDGNode node = new PDGNode(nodeIdCounter++, stmt, label);
         nodes.add(node);
         if (stmt != null) {
-            stmtToNode.put(stmt, node);
+            stmtToNode.put(new Pair<Statement, Position>(stmt, stmt.getBegin().get()), node);
         }
         return node;
     }
@@ -111,7 +113,7 @@ public class PDGBuilder {
         for (int i = 0; i < statements.size(); ++i) {
             processStatement(statements.get(i),
                     new CFGContext(
-                        (i != statements.size() - 1 ? stmtToNode.get(statements.get(i + 1)) : ctx.cont),
+                        (i != statements.size() - 1 ? stmtToNode(statements.get(i + 1)) : ctx.cont),
                         ctx.curLoopNode,
                         ctx.contForCurLoopNode,
                         ctx.methodExit
@@ -119,8 +121,12 @@ public class PDGBuilder {
         }
     }
 
+    private PDGNode stmtToNode(Statement stmt) {
+        return stmtToNode.get(new Pair<Statement, Position>(stmt, stmt.getBegin().get()));
+    }
+
     private PDGNode processStatement(Statement stmt, CFGContext ctx) {
-        var node = stmtToNode.get(stmt);
+        var node = stmtToNode(stmt);
         if (stmt instanceof ExpressionStmt) {
             addControlEdge(node, ctx.cont);
             analyzeVariableUsage(stmt, node);
@@ -141,7 +147,7 @@ public class PDGBuilder {
         } else if (stmt instanceof WhileStmt) {
             var while_stmt = (WhileStmt) stmt;
             Statement body = while_stmt.getBody();
-            var new_ctx = new CFGContext(node, stmtToNode.get(body), ctx.cont, ctx.methodExit);
+            var new_ctx = new CFGContext(node, stmtToNode(body), ctx.cont, ctx.methodExit);
             addControlEdge(node, ctx.cont);
             processStatement(body, new_ctx);
             return node;
@@ -149,14 +155,15 @@ public class PDGBuilder {
         //     processForStmt((ForStmt) stmt, ctx);
         } else if (stmt instanceof ReturnStmt) {
             addControlEdge(node, ctx.methodExit);
-            analyzeVariableUsage(stmt, node);
             return node;
         } else if (stmt instanceof BlockStmt) {
             processBlockStmt((BlockStmt) stmt, ctx);
             return null;
+        } else if (stmt instanceof BreakStmt) {
+            System.err.println("HERE: " + stmt.getBegin().get().line + " " + node.hashCode());
+            addControlEdge(node, ctx.contForCurLoopNode);
+            return null;
         // } else if (stmt instanceof ContinueStmt) {
-        //     // TODO
-        // } else if (stmt instanceof BreakStmt) {
         //     // TODO
         } else {
             // TODO: Generic statement
@@ -279,7 +286,7 @@ public class PDGBuilder {
         for (Map.Entry<Statement, Set<String>> entry : stmtToVarsUsed.entrySet()) {
             Statement stmt = entry.getKey();
             Set<String> usedVars = entry.getValue();
-            PDGNode targetNode = stmtToNode.get(stmt);
+            PDGNode targetNode = stmtToNode(stmt);
 
             if (targetNode == null) continue;
 
