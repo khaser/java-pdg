@@ -2,8 +2,6 @@ digraph PDG {
   rankdir=TB;
   node [shape=box];
 
-  node0 [label="ENTRY: nestedControl(int, int, int)"];
-  node1 [label="EXIT: nestedControl(int, int, int)"];
   node2 [label="3: int max = a;"];
   node3 [label="if (b > max)"];
   node4 [label="5: max = b;"];

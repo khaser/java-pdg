@@ -105,91 +105,77 @@ public class PDGBuilder {
         return node;
     }
 
-    private void processBlockStmt(BlockStmt blk, CFGContext ctx) {
+    // Return true if exists control flow that reaches ctx.cont
+    private boolean processBlockStmt(BlockStmt blk, CFGContext ctx) {
         List<Statement> statements = blk.getStatements();
         for (int i = 0; i < statements.size(); ++i) {
-            processStatement(statements.get(i),
-                    new CFGContext(
-                        (i != statements.size() - 1 ? stmtToNode(statements.get(i + 1)) : ctx.cont),
-                        ctx.curLoopNode,
-                        ctx.contForCurLoopNode,
-                        ctx.methodExit
-                    ));
+            boolean ret = processStatement(statements.get(i),
+                            new CFGContext(
+                                (i != statements.size() - 1 ? stmtToNode(statements.get(i + 1)) : ctx.cont),
+                                ctx.curLoopNode,
+                                ctx.contForCurLoopNode,
+                                ctx.methodExit
+                          ));
+            if (!ret) { return false; }
         }
+        return true;
     }
 
     private PDGNode stmtToNode(Statement stmt) {
         return stmtToNode.get(new Pair<Statement, Position>(stmt, stmt.getBegin().get()));
     }
 
-    private PDGNode processStatement(Statement stmt, CFGContext ctx) {
+    // Return true if exists control flow that reaches ctx.cont
+    private boolean processStatement(Statement stmt, CFGContext ctx) {
         var node = stmtToNode(stmt);
+        if (node != null) { // we don't have nodes for BlockStmt
+            node.reachable = true;
+        }
         if (stmt instanceof ExpressionStmt) {
             addControlEdge(node, ctx.cont);
             analyzeVariableUsage(stmt, node);
-            return node;
+            return true;
         } else if (stmt instanceof IfStmt) {
             var if_stmt = (IfStmt) stmt;
             Statement then_stmt = if_stmt.getThenStmt();
             var new_ctx = new CFGContext(ctx.cont, ctx.curLoopNode, ctx.contForCurLoopNode, ctx.methodExit);
-            processStatement(then_stmt, new_ctx);
+            boolean ret = processStatement(then_stmt, new_ctx);
 
             if (if_stmt.getElseStmt().isPresent()) {
                 Statement else_stmt = if_stmt.getElseStmt().get();
-                processStatement(else_stmt, new_ctx);
+                ret |= processStatement(else_stmt, new_ctx);
             } else {
                 addControlEdge(node, ctx.cont);
             }
-            return null;
+            return ret;
         } else if (stmt instanceof WhileStmt) {
             var while_stmt = (WhileStmt) stmt;
             Statement body = while_stmt.getBody();
             var new_ctx = new CFGContext(node, node, ctx.cont, ctx.methodExit);
             addControlEdge(node, ctx.cont);
             processStatement(body, new_ctx);
-            return node;
+            return true;
         // } else if (stmt instanceof ForStmt) {
         //     processForStmt((ForStmt) stmt, ctx);
         } else if (stmt instanceof ReturnStmt) {
             addControlEdge(node, ctx.methodExit);
-            return node;
+            return false;
         } else if (stmt instanceof BlockStmt) {
-            processBlockStmt((BlockStmt) stmt, ctx);
-            return null;
+            return processBlockStmt((BlockStmt) stmt, ctx);
         } else if (stmt instanceof BreakStmt) {
             addControlEdge(node, ctx.contForCurLoopNode);
-            return null;
+            return false;
         } else if (stmt instanceof ContinueStmt) {
             addControlEdge(node, ctx.curLoopNode);
-            return null;
+            return false;
         } else {
             // TODO: Generic statement
             // PDGNode node = createNode(stmt, stmt.toString().trim());
             // addControlEdge(controlParent, node, "");
             // analyzeVariableUsage(stmt, node);
-            return null;
+            return false;
         }
     }
-
-    private void processExpressionStmt(ExpressionStmt stmt, CFGContext ctx) {
-    }
-
-    private void processIfStmt(IfStmt stmt, CFGContext ctx) {
-    }
-
-    // private void processWhileStmt(WhileStmt stmt, PDGNode controlParent) {
-    //     Expression condition = stmt.getCondition();
-    //     String label = "while (" + condition.toString() + ")";
-    //     PDGNode whileNode = createNode(stmt, label);
-    //     addControlEdge(controlParent, whileNode, "");
-    //
-    //     // Track variables used in condition
-    //     Set<String> usedVars = extractUsedVariables(condition);
-    //     stmtToVarsUsed.put(stmt, usedVars);
-    //
-    //     Statement body = stmt.getBody();
-    //     processStatement(body, whileNode);
-    // }
 
     // private void processForStmt(ForStmt stmt, PDGNode controlParent) {
     //     String label = "for (...)";

@@ -7,12 +7,12 @@ digraph PDG {
   node4 [label="while (i <= n)"];
   node5 [label="6: result = result * i;"];
   node6 [label="if (i > 100)"];
-  node7 [label="8: break;"];
+  node7 [label="8: continue;"];
   node8 [label="10: i = i + 1;"];
   node9 [label="11: int j = 5;"];
   node10 [label="while (j < 1000)"];
   node11 [label="if (i * j > 404)"];
-  node12 [label="14: break;"];
+  node12 [label="14: continue;"];
   node14 [label="18: i -= j;"];
   node15 [label="21: return result;"];
 
@@ -26,11 +26,11 @@ digraph PDG {
   node3 -> node4 [label="ctrl", color=blue];
   node4 -> node15 [label="ctrl", color=blue];
   node5 -> node6 [label="ctrl", color=blue];
-  node7 -> node15 [label="ctrl", color=blue];
+  node7 -> node4 [label="ctrl", color=blue];
   node8 -> node9 [label="ctrl", color=blue];
   node9 -> node10 [label="ctrl", color=blue];
   node10 -> node14 [label="ctrl", color=blue];
-  node12 -> node14 [label="ctrl", color=blue];
+  node12 -> node10 [label="ctrl", color=blue];
   node11 -> node13 [label="ctrl", color=blue];
   node14 -> node4 [label="ctrl", color=blue];
   node15 -> node1 [label="ctrl", color=blue];

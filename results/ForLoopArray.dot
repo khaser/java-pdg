@@ -2,14 +2,10 @@ digraph PDG {
   rankdir=TB;
   node [shape=box];
 
-  node0 [label="ENTRY: forLoopArray(int[])"];
-  node1 [label="EXIT: forLoopArray(int[])"];
   node2 [label="3: int sum = 0;"];
   node3 [label="4: for (int i = 0; i < arr.length; i++) {\n    int value = arr[i];\n    sum = sum + value;\n}"];
-  node4 [label="8: return sum;"];
 
   node0 -> node2 [label="ctrl", color=blue];
   node2 -> node3 [label="ctrl", color=blue];
-  node4 -> node1 [label="ctrl", color=blue];
 }
 

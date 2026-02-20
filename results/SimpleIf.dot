@@ -2,8 +2,6 @@ digraph PDG {
   rankdir=TB;
   node [shape=box];
 
-  node0 [label="ENTRY: simpleIf()"];
-  node1 [label="EXIT: simpleIf()"];
   node2 [label="3: int a = 1;"];
   node3 [label="4: int b = 5;"];
   node4 [label="5: int result = -1;"];

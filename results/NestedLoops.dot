@@ -2,8 +2,6 @@ digraph PDG {
   rankdir=TB;
   node [shape=box];
 
-  node0 [label="ENTRY: nestedLoops(int[])"];
-  node1 [label="EXIT: nestedLoops(int[])"];
   node2 [label="3: int result = 1;"];
   node3 [label="4: int i = 1;"];
   node4 [label="while (i <= n)"];

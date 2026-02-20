@@ -6,11 +6,13 @@ public class PDGNode {
     final int id;
     final Statement statement;
     final String label;
+    boolean reachable;
 
     public PDGNode(int id, Statement statement, String label) {
         this.id = id;
         this.statement = statement;
         this.label = label;
+        this.reachable = false;
     }
 
     @Override

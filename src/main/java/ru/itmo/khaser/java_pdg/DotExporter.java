@@ -11,6 +11,7 @@ public class DotExporter {
         sb.append("\n");
 
         for (PDGNode node : pdg.nodes) {
+            if (!node.reachable) continue;
             sb.append("  ").append(nodeId(node)).append(" [label=\"");
             sb.append(escapeLabel(node.label));
             sb.append("\"];\n");
