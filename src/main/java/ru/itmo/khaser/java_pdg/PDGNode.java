@@ -17,5 +17,18 @@ public class PDGNode {
     public String toString() {
         return "Node" + id + ": " + label;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PDGNode pdgNode = (PDGNode) o;
+        return id == pdgNode.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(id);
+    }
 }
 

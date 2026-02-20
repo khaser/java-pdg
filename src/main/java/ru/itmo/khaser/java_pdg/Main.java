@@ -47,6 +47,13 @@ public class Main {
             PDGBuilder builder = new PDGBuilder(method);
             PDG pdg = builder.build();
 
+            for (var node : pdg.nodes) {
+                System.err.println(node);
+            }
+            for (var edge : pdg.edges) {
+                System.err.println(edge);
+            }
+
             DotExporter exporter = new DotExporter();
             String dot = exporter.export(pdg);
             System.out.println(dot);

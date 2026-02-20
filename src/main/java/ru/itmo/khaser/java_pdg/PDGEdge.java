@@ -22,5 +22,25 @@ public class PDGEdge {
     public String toString() {
         return source + " -> " + target + " [" + type + ": " + label + "]";
     }
+
+    // @Override
+    // public boolean equals(Object o) {
+    //     if (this == o) return true;
+    //     if (o == null || getClass() != o.getClass()) return false;
+    //     PDGEdge pdgEdge = (PDGEdge) o;
+    //     return source.equals(pdgEdge.source) &&
+    //            target.equals(pdgEdge.target) &&
+    //            type == pdgEdge.type &&
+    //            label.equals(pdgEdge.label);
+    // }
+    //
+    // @Override
+    // public int hashCode() {
+    //     int result = source.hashCode();
+    //     result = 31 * result + target.hashCode();
+    //     result = 31 * result + type.hashCode();
+    //     result = 31 * result + label.hashCode();
+    //     return result;
+    // }
 }
 

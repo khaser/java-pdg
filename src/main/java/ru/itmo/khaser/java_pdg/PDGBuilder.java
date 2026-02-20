@@ -18,6 +18,21 @@ public class PDGBuilder {
     private final Map<Statement, Set<String>> stmtToVarsUsed;
     private final Map<Statement, Set<String>> stmtToVarsDefined;
 
+    class CFGContext {
+        final PDGNode parent;
+        final PDGNode cont;
+        final PDGNode curLoopNode;
+        final PDGNode contForCurLoopNode;
+        final PDGNode methodExit;
+        CFGContext(PDGNode parent, PDGNode cont, PDGNode curLoopNode, PDGNode contForCurLoopNode, PDGNode methodExit) {
+            this.parent = parent;
+            this.cont = cont;
+            this.curLoopNode = curLoopNode;
+            this.contForCurLoopNode = contForCurLoopNode;
+            this.methodExit = methodExit;
+        }
+    };
+
     public PDGBuilder(MethodDeclaration method) {
         this.method = method;
         this.nodes = new ArrayList<>();
@@ -31,15 +46,57 @@ public class PDGBuilder {
 
     public PDG build() {
         PDGNode entryNode = createNode(null, "ENTRY: " + method.getSignature().asString());
+        PDGNode exitNode = createNode(null, "EXIT: " + method.getSignature().asString());
 
         if (method.getBody().isPresent()) {
             BlockStmt body = method.getBody().get();
-            processStatements(body.getStatements(), entryNode);
+            addControlEdge(entryNode, createNodesRec(body));
+            processBlockStmt(body, new CFGContext(entryNode, exitNode, null, null, exitNode));
         }
 
         addDataDependencies();
 
         return new PDG(nodes, edges);
+    }
+
+    // Returns entry point to created structure
+    private PDGNode createNodesRec(Statement stmt) {
+        if (stmt instanceof BlockStmt) {
+            var blk = (BlockStmt) stmt;
+            List<Statement> statements = blk.getStatements();
+            PDGNode ret = null;
+            for (var i : statements) {
+                var tmp = createNodesRec(i);
+                if (ret == null) ret = tmp;
+            }
+            return ret;
+        } else if (stmt instanceof IfStmt) {
+            var if_stmt = (IfStmt) stmt;
+            String label = "if (" + if_stmt.getCondition().toString() + ")";
+            var if_node = createNode(if_stmt, label);
+            Statement then_stmt = if_stmt.getThenStmt();
+            var then_node = createNodesRec(then_stmt);
+            addControlEdge(if_node, then_node);
+            if (if_stmt.getElseStmt().isPresent()) {
+                var else_stmt = if_stmt.getElseStmt().get();
+                var else_node = createNodesRec(else_stmt);
+                addControlEdge(if_node, else_node);
+            }
+            return if_node;
+        } else if (stmt instanceof WhileStmt) {
+            var while_stmt = (WhileStmt) stmt;
+            String label = "while (" + while_stmt.getCondition().toString() + ")";
+            var while_node = createNode(while_stmt, label);
+            Statement body_stmt = while_stmt.getBody();
+            var body_node = createNodesRec(body_stmt);
+            addControlEdge(while_node, body_node);
+            return while_node;
+        } else {
+            return createNode(stmt, stmt.toString().trim());
+        }
+        //     // TODO
+        // } else if (stmt instanceof BreakStmt) {
+        //     // TODO
     }
 
     private PDGNode createNode(Statement stmt, String label) {
@@ -51,114 +108,125 @@ public class PDGBuilder {
         return node;
     }
 
-    private void processStatements(List<Statement> statements, PDGNode controlParent) {
-        for (Statement stmt : statements) {
-            processStatement(stmt, controlParent);
+    private void processBlockStmt(BlockStmt blk, CFGContext ctx) {
+        List<Statement> statements = blk.getStatements();
+        if (statements.isEmpty()) {
+            addControlEdge(ctx.parent, ctx.cont);
+            return;
+        }
+
+        PDGNode parent = ctx.parent;
+
+        for (int i = 0; i < statements.size(); ++i) {
+            parent = processStatement(statements.get(i),
+                    new CFGContext(
+                        parent,
+                        (i != statements.size() - 1 ? stmtToNode.get(statements.get(i + 1)) : ctx.cont),
+                        ctx.curLoopNode,
+                        ctx.contForCurLoopNode,
+                        ctx.methodExit
+                    ));
         }
     }
 
-    private void processStatement(Statement stmt, PDGNode controlParent) {
+    private PDGNode processStatement(Statement stmt, CFGContext ctx) {
+        var node = stmtToNode.get(stmt);
         if (stmt instanceof ExpressionStmt) {
-            processExpressionStmt((ExpressionStmt) stmt, controlParent);
-        } else if (stmt instanceof IfStmt) {
-            processIfStmt((IfStmt) stmt, controlParent);
-        } else if (stmt instanceof WhileStmt) {
-            processWhileStmt((WhileStmt) stmt, controlParent);
-        } else if (stmt instanceof ForStmt) {
-            processForStmt((ForStmt) stmt, controlParent);
-        } else if (stmt instanceof ReturnStmt) {
-            processReturnStmt((ReturnStmt) stmt, controlParent);
-        } else if (stmt instanceof BlockStmt) {
-            processStatements(((BlockStmt) stmt).getStatements(), controlParent);
-        } else {
-            // Generic statement
-            PDGNode node = createNode(stmt, stmt.toString().trim());
-            addControlEdge(controlParent, node, "");
+            addControlEdge(node, ctx.cont);
             analyzeVariableUsage(stmt, node);
+            return node;
+        } else if (stmt instanceof IfStmt) {
+            var if_stmt = (IfStmt) stmt;
+
+            Statement then_stmt = if_stmt.getThenStmt();
+            var new_ctx = new CFGContext(node, ctx.cont, ctx.curLoopNode, ctx.contForCurLoopNode, ctx.methodExit);
+            processStatement(then_stmt, new_ctx);
+
+            if (if_stmt.getElseStmt().isPresent()) {
+                Statement else_stmt = if_stmt.getElseStmt().get();
+                processStatement(else_stmt, new_ctx);
+            }
+            return null;
+        } else if (stmt instanceof WhileStmt) {
+            var while_stmt = (WhileStmt) stmt;
+            Statement body = while_stmt.getBody();
+            var new_ctx = new CFGContext(node, node, stmtToNode.get(body), ctx.cont, ctx.methodExit);
+            addControlEdge(node, ctx.cont);
+            processStatement(body, new_ctx);
+            return node;
+        // } else if (stmt instanceof ForStmt) {
+        //     processForStmt((ForStmt) stmt, ctx);
+        } else if (stmt instanceof ReturnStmt) {
+            addControlEdge(node, ctx.methodExit);
+            analyzeVariableUsage(stmt, node);
+            return node;
+        } else if (stmt instanceof BlockStmt) {
+            processBlockStmt((BlockStmt) stmt, ctx);
+            return null;
+        // } else if (stmt instanceof ContinueStmt) {
+        //     // TODO
+        // } else if (stmt instanceof BreakStmt) {
+        //     // TODO
+        } else {
+            // TODO: Generic statement
+            // PDGNode node = createNode(stmt, stmt.toString().trim());
+            // addControlEdge(controlParent, node, "");
+            // analyzeVariableUsage(stmt, node);
+            return null;
         }
     }
 
-    private void processExpressionStmt(ExpressionStmt stmt, PDGNode controlParent) {
-        Expression expr = stmt.getExpression();
-        String label = expr.toString();
-        PDGNode node = createNode(stmt, label);
-        addControlEdge(controlParent, node, "");
-        analyzeVariableUsage(stmt, node);
+    private void processExpressionStmt(ExpressionStmt stmt, CFGContext ctx) {
     }
 
-    private void processIfStmt(IfStmt stmt, PDGNode controlParent) {
-        Expression condition = stmt.getCondition();
-        String label = "if (" + condition.toString() + ")";
-        PDGNode ifNode = createNode(stmt, label);
-        addControlEdge(controlParent, ifNode, "");
-
-        Set<String> usedVars = extractUsedVariables(condition);
-        stmtToVarsUsed.put(stmt, usedVars);
-
-        Statement thenStmt = stmt.getThenStmt();
-        processStatement(thenStmt, ifNode);
-
-        if (stmt.getElseStmt().isPresent()) {
-            Statement elseStmt = stmt.getElseStmt().get();
-            processStatement(elseStmt, ifNode);
-        }
+    private void processIfStmt(IfStmt stmt, CFGContext ctx) {
     }
 
-    private void processWhileStmt(WhileStmt stmt, PDGNode controlParent) {
-        Expression condition = stmt.getCondition();
-        String label = "while (" + condition.toString() + ")";
-        PDGNode whileNode = createNode(stmt, label);
-        addControlEdge(controlParent, whileNode, "");
+    // private void processWhileStmt(WhileStmt stmt, PDGNode controlParent) {
+    //     Expression condition = stmt.getCondition();
+    //     String label = "while (" + condition.toString() + ")";
+    //     PDGNode whileNode = createNode(stmt, label);
+    //     addControlEdge(controlParent, whileNode, "");
+    //
+    //     // Track variables used in condition
+    //     Set<String> usedVars = extractUsedVariables(condition);
+    //     stmtToVarsUsed.put(stmt, usedVars);
+    //
+    //     Statement body = stmt.getBody();
+    //     processStatement(body, whileNode);
+    // }
 
-        // Track variables used in condition
-        Set<String> usedVars = extractUsedVariables(condition);
-        stmtToVarsUsed.put(stmt, usedVars);
-
-        Statement body = stmt.getBody();
-        processStatement(body, whileNode);
-    }
-
-    private void processForStmt(ForStmt stmt, PDGNode controlParent) {
-        String label = "for (...)";
-        PDGNode forNode = createNode(stmt, label);
-        addControlEdge(controlParent, forNode, "");
-
-        Set<String> usedVars = new HashSet<>();
-        Set<String> definedVars = new HashSet<>();
-
-        for (Expression init : stmt.getInitialization()) {
-            usedVars.addAll(extractUsedVariables(init));
-            definedVars.addAll(extractDefinedVariables(init));
-        }
-
-        if (stmt.getCompare().isPresent()) {
-            usedVars.addAll(extractUsedVariables(stmt.getCompare().get()));
-        }
-
-        for (Expression update : stmt.getUpdate()) {
-            usedVars.addAll(extractUsedVariables(update));
-        }
-
-        stmtToVarsUsed.put(stmt, usedVars);
-        stmtToVarsDefined.put(stmt, definedVars);
-
-        for (String var : definedVars) {
-            varToDefNodes.computeIfAbsent(var, k -> new ArrayList<>()).add(forNode);
-        }
-
-        Statement body = stmt.getBody();
-        processStatement(body, forNode);
-    }
-
-    private void processReturnStmt(ReturnStmt stmt, PDGNode controlParent) {
-        String label = "return";
-        if (stmt.getExpression().isPresent()) {
-            label += " " + stmt.getExpression().get().toString();
-        }
-        PDGNode node = createNode(stmt, label);
-        addControlEdge(controlParent, node, "");
-        analyzeVariableUsage(stmt, node);
-    }
+    // private void processForStmt(ForStmt stmt, PDGNode controlParent) {
+    //     String label = "for (...)";
+    //     PDGNode forNode = createNode(stmt, label);
+    //     addControlEdge(controlParent, forNode, "");
+    //
+    //     Set<String> usedVars = new HashSet<>();
+    //     Set<String> definedVars = new HashSet<>();
+    //
+    //     for (Expression init : stmt.getInitialization()) {
+    //         usedVars.addAll(extractUsedVariables(init));
+    //         definedVars.addAll(extractDefinedVariables(init));
+    //     }
+    //
+    //     if (stmt.getCompare().isPresent()) {
+    //         usedVars.addAll(extractUsedVariables(stmt.getCompare().get()));
+    //     }
+    //
+    //     for (Expression update : stmt.getUpdate()) {
+    //         usedVars.addAll(extractUsedVariables(update));
+    //     }
+    //
+    //     stmtToVarsUsed.put(stmt, usedVars);
+    //     stmtToVarsDefined.put(stmt, definedVars);
+    //
+    //     for (String var : definedVars) {
+    //         varToDefNodes.computeIfAbsent(var, k -> new ArrayList<>()).add(forNode);
+    //     }
+    //
+    //     Statement body = stmt.getBody();
+    //     processStatement(body, forNode);
+    // }
 
     private void analyzeVariableUsage(Statement stmt, PDGNode node) {
         Set<String> usedVars = extractUsedVariables(stmt);
@@ -207,8 +275,9 @@ public class PDGBuilder {
         return vars;
     }
 
-    private void addControlEdge(PDGNode source, PDGNode target, String label) {
-        edges.add(new PDGEdge(source, target, PDGEdge.EdgeType.CONTROL, label));
+    private void addControlEdge(PDGNode source, PDGNode target) {
+        if (source == null || target == null) return;
+        edges.add(new PDGEdge(source, target, PDGEdge.EdgeType.CONTROL, ""));
     }
 
     private void addDataEdge(PDGNode source, PDGNode target, String varName) {
