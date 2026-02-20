@@ -2,15 +2,17 @@ digraph PDG {
   rankdir=TB;
   node [shape=box];
 
+  node0 [label="ENTRY: simpleCalculation()"];
+  node1 [label="EXIT: simpleCalculation()"];
   node2 [label="3: int a = 1;"];
   node3 [label="4: int b = 5;"];
   node4 [label="5: int sum = a + b;"];
   node5 [label="6: return sum;"];
 
-  node0 -> node2 [label="ctrl", color=blue];
-  node2 -> node3 [label="ctrl", color=blue];
-  node3 -> node4 [label="ctrl", color=blue];
-  node4 -> node5 [label="ctrl", color=blue];
-  node5 -> node1 [label="ctrl", color=blue];
+  node0 -> node2 [label="", color=blue];
+  node2 -> node3 [label="", color=blue];
+  node3 -> node4 [label="", color=blue];
+  node4 -> node5 [label="", color=blue];
+  node5 -> node1 [label="", color=blue];
 }
 

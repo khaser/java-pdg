@@ -31,10 +31,10 @@ public class DotExporter {
             sb.append(" [label=\"");
 
             if (edge.type == PDGEdge.EdgeType.CONTROL) {
-                sb.append("ctrl");
-                if (!edge.label.isEmpty()) {
-                    sb.append(": ").append(escapeLabel(edge.label));
-                }
+                // sb.append("ctrl");
+                // if (!edge.label.isEmpty()) {
+                //     sb.append(": ").append(escapeLabel(edge.label));
+                // }
             } else {
                 sb.append("data: ").append(escapeLabel(edge.label));
             }

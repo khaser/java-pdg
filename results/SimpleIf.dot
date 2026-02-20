@@ -2,6 +2,8 @@ digraph PDG {
   rankdir=TB;
   node [shape=box];
 
+  node0 [label="ENTRY: simpleIf()"];
+  node1 [label="EXIT: simpleIf()"];
   node2 [label="3: int a = 1;"];
   node3 [label="4: int b = 5;"];
   node4 [label="5: int result = -1;"];
@@ -10,14 +12,14 @@ digraph PDG {
   node7 [label="9: result = a * b;"];
   node8 [label="11: return result;"];
 
-  node5 -> node6 [label="ctrl", color=blue];
-  node5 -> node7 [label="ctrl", color=blue];
-  node0 -> node2 [label="ctrl", color=blue];
-  node2 -> node3 [label="ctrl", color=blue];
-  node3 -> node4 [label="ctrl", color=blue];
-  node4 -> node5 [label="ctrl", color=blue];
-  node6 -> node8 [label="ctrl", color=blue];
-  node7 -> node8 [label="ctrl", color=blue];
-  node8 -> node1 [label="ctrl", color=blue];
+  node5 -> node6 [label="", color=blue];
+  node5 -> node7 [label="", color=blue];
+  node0 -> node2 [label="", color=blue];
+  node2 -> node3 [label="", color=blue];
+  node3 -> node4 [label="", color=blue];
+  node4 -> node5 [label="", color=blue];
+  node6 -> node8 [label="", color=blue];
+  node7 -> node8 [label="", color=blue];
+  node8 -> node1 [label="", color=blue];
 }
 

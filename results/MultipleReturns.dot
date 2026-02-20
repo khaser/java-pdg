@@ -2,18 +2,20 @@ digraph PDG {
   rankdir=TB;
   node [shape=box];
 
+  node0 [label="ENTRY: multipleReturns()"];
+  node1 [label="EXIT: multipleReturns()"];
   node2 [label="3: int a = 1;"];
   node3 [label="4: int b = 5;"];
   node4 [label="if (a < b)"];
   node5 [label="6: return a + b;"];
   node6 [label="8: return a * b;"];
 
-  node4 -> node5 [label="ctrl", color=blue];
-  node4 -> node6 [label="ctrl", color=blue];
-  node0 -> node2 [label="ctrl", color=blue];
-  node2 -> node3 [label="ctrl", color=blue];
-  node3 -> node4 [label="ctrl", color=blue];
-  node5 -> node1 [label="ctrl", color=blue];
-  node6 -> node1 [label="ctrl", color=blue];
+  node4 -> node5 [label="", color=blue];
+  node4 -> node6 [label="", color=blue];
+  node0 -> node2 [label="", color=blue];
+  node2 -> node3 [label="", color=blue];
+  node3 -> node4 [label="", color=blue];
+  node5 -> node1 [label="", color=blue];
+  node6 -> node1 [label="", color=blue];
 }
 

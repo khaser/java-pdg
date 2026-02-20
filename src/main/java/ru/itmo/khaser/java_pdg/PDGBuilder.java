@@ -47,6 +47,8 @@ public class PDGBuilder {
     public PDG build() {
         PDGNode entryNode = createNode(null, "ENTRY: " + method.getSignature().asString());
         PDGNode exitNode = createNode(null, "EXIT: " + method.getSignature().asString());
+        entryNode.reachable = true;
+        exitNode.reachable = true;
 
         if (method.getBody().isPresent()) {
             BlockStmt body = method.getBody().get();
@@ -146,6 +148,7 @@ public class PDGBuilder {
                 ret |= processStatement(else_stmt, new_ctx);
             } else {
                 addControlEdge(node, ctx.cont);
+                ret = true;
             }
             return ret;
         } else if (stmt instanceof WhileStmt) {
