@@ -1,5 +1,7 @@
 package ru.itmo.khaser.java_pdg;
 
+import ru.itmo.khaser.java_pdg.PDGEdge.EdgeType;
+
 public class DotExporter {
 
     public String export(PDG pdg) {
@@ -20,6 +22,7 @@ public class DotExporter {
         sb.append("\n");
 
         for (PDGEdge edge : pdg.edges) {
+            if (edge.type == EdgeType.DATA) continue;
             sb.append("  ").append(nodeId(edge.source));
             sb.append(" -> ");
             sb.append(nodeId(edge.target));

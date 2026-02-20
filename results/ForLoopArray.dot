@@ -5,9 +5,17 @@ digraph PDG {
   node0 [label="ENTRY: forLoopArray(int[])"];
   node1 [label="EXIT: forLoopArray(int[])"];
   node2 [label="3: int sum = 0;"];
-  node3 [label="4: for (int i = 0; i < arr.length; i++) {\n    int value = arr[i];\n    sum = sum + value;\n}"];
+  node3 [label="for (int i = 0; i < arr.length; i++) {"];
+  node4 [label="5: int value = arr[i];"];
+  node5 [label="6: sum = sum + value;"];
+  node6 [label="8: return sum;"];
 
+  node3 -> node4 [label="", color=blue];
   node0 -> node2 [label="", color=blue];
   node2 -> node3 [label="", color=blue];
+  node3 -> node6 [label="", color=blue];
+  node4 -> node5 [label="", color=blue];
+  node5 -> node3 [label="", color=blue];
+  node6 -> node1 [label="", color=blue];
 }
 

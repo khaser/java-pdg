@@ -91,6 +91,14 @@ public class PDGBuilder {
             var body_node = createNodesRec(body_stmt);
             addControlEdge(while_node, body_node);
             return while_node;
+        } else if (stmt instanceof ForStmt) {
+            var for_stmt = (ForStmt) stmt;
+            String label = stmt.toString().split("\n")[0];
+            var for_node = createNode(for_stmt, label);
+            Statement body_stmt = for_stmt.getBody();
+            var body_node = createNodesRec(body_stmt);
+            addControlEdge(for_node, body_node);
+            return for_node;
         } else {
             return createNode(stmt, stmt.getBegin().get().line + ": " + stmt.toString().trim());
         }
@@ -158,9 +166,16 @@ public class PDGBuilder {
             addControlEdge(node, ctx.cont);
             processStatement(body, new_ctx);
             return true;
-        // TODO: support for statement
-        // } else if (stmt instanceof ForStmt) {
-        //     processForStmt((ForStmt) stmt, ctx);
+        } else if (stmt instanceof ForStmt) {
+            var for_stmt = (ForStmt) stmt;
+            for_stmt.getCompare().ifPresent(it -> analyzeVariableUsage(node, it));
+            for_stmt.getUpdate().forEach(it -> analyzeVariableUsage(node, it));
+            for_stmt.getInitialization().forEach(it -> analyzeVariableUsage(node, it));
+            Statement body = for_stmt.getBody();
+            var new_ctx = new CFGContext(node, node, ctx.cont, ctx.methodExit);
+            addControlEdge(node, ctx.cont);
+            processStatement(body, new_ctx);
+            return true;
         } else if (stmt instanceof ReturnStmt) {
             addControlEdge(node, ctx.methodExit);
             analyzeVariableUsage(node, stmt);
@@ -174,10 +189,6 @@ public class PDGBuilder {
             addControlEdge(node, ctx.curLoopNode);
             return false;
         } else {
-            // TODO: Generic statement
-            // PDGNode node = createNode(stmt, stmt.toString().trim());
-            // addControlEdge(controlParent, node, "");
-            // analyzeVariableUsage(stmt, node);
             return false;
         }
     }
