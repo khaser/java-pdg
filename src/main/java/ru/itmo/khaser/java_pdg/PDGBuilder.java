@@ -19,13 +19,11 @@ public class PDGBuilder {
     private final Map<Statement, Set<String>> stmtToVarsDefined;
 
     class CFGContext {
-        final PDGNode parent;
         final PDGNode cont;
         final PDGNode curLoopNode;
         final PDGNode contForCurLoopNode;
         final PDGNode methodExit;
-        CFGContext(PDGNode parent, PDGNode cont, PDGNode curLoopNode, PDGNode contForCurLoopNode, PDGNode methodExit) {
-            this.parent = parent;
+        CFGContext(PDGNode cont, PDGNode curLoopNode, PDGNode contForCurLoopNode, PDGNode methodExit) {
             this.cont = cont;
             this.curLoopNode = curLoopNode;
             this.contForCurLoopNode = contForCurLoopNode;
@@ -51,7 +49,7 @@ public class PDGBuilder {
         if (method.getBody().isPresent()) {
             BlockStmt body = method.getBody().get();
             addControlEdge(entryNode, createNodesRec(body));
-            processBlockStmt(body, new CFGContext(entryNode, exitNode, null, null, exitNode));
+            processBlockStmt(body, new CFGContext(exitNode, null, null, exitNode));
         }
 
         addDataDependencies();
@@ -110,17 +108,9 @@ public class PDGBuilder {
 
     private void processBlockStmt(BlockStmt blk, CFGContext ctx) {
         List<Statement> statements = blk.getStatements();
-        if (statements.isEmpty()) {
-            addControlEdge(ctx.parent, ctx.cont);
-            return;
-        }
-
-        PDGNode parent = ctx.parent;
-
         for (int i = 0; i < statements.size(); ++i) {
-            parent = processStatement(statements.get(i),
+            processStatement(statements.get(i),
                     new CFGContext(
-                        parent,
                         (i != statements.size() - 1 ? stmtToNode.get(statements.get(i + 1)) : ctx.cont),
                         ctx.curLoopNode,
                         ctx.contForCurLoopNode,
@@ -138,7 +128,7 @@ public class PDGBuilder {
         } else if (stmt instanceof IfStmt) {
             var if_stmt = (IfStmt) stmt;
             Statement then_stmt = if_stmt.getThenStmt();
-            var new_ctx = new CFGContext(node, ctx.cont, ctx.curLoopNode, ctx.contForCurLoopNode, ctx.methodExit);
+            var new_ctx = new CFGContext(ctx.cont, ctx.curLoopNode, ctx.contForCurLoopNode, ctx.methodExit);
             processStatement(then_stmt, new_ctx);
 
             if (if_stmt.getElseStmt().isPresent()) {
@@ -151,7 +141,7 @@ public class PDGBuilder {
         } else if (stmt instanceof WhileStmt) {
             var while_stmt = (WhileStmt) stmt;
             Statement body = while_stmt.getBody();
-            var new_ctx = new CFGContext(node, node, stmtToNode.get(body), ctx.cont, ctx.methodExit);
+            var new_ctx = new CFGContext(node, stmtToNode.get(body), ctx.cont, ctx.methodExit);
             addControlEdge(node, ctx.cont);
             processStatement(body, new_ctx);
             return node;
