@@ -94,9 +94,6 @@ public class PDGBuilder {
         } else {
             return createNode(stmt, stmt.getBegin().get().line + ": " + stmt.toString().trim());
         }
-        //     // TODO
-        // } else if (stmt instanceof BreakStmt) {
-        //     // TODO
     }
 
     private PDGNode createNode(Statement stmt, String label) {
@@ -147,7 +144,7 @@ public class PDGBuilder {
         } else if (stmt instanceof WhileStmt) {
             var while_stmt = (WhileStmt) stmt;
             Statement body = while_stmt.getBody();
-            var new_ctx = new CFGContext(node, stmtToNode(body), ctx.cont, ctx.methodExit);
+            var new_ctx = new CFGContext(node, node, ctx.cont, ctx.methodExit);
             addControlEdge(node, ctx.cont);
             processStatement(body, new_ctx);
             return node;
@@ -160,11 +157,11 @@ public class PDGBuilder {
             processBlockStmt((BlockStmt) stmt, ctx);
             return null;
         } else if (stmt instanceof BreakStmt) {
-            System.err.println("HERE: " + stmt.getBegin().get().line + " " + node.hashCode());
             addControlEdge(node, ctx.contForCurLoopNode);
             return null;
-        // } else if (stmt instanceof ContinueStmt) {
-        //     // TODO
+        } else if (stmt instanceof ContinueStmt) {
+            addControlEdge(node, ctx.curLoopNode);
+            return null;
         } else {
             // TODO: Generic statement
             // PDGNode node = createNode(stmt, stmt.toString().trim());
