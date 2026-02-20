@@ -137,7 +137,6 @@ public class PDGBuilder {
             return node;
         } else if (stmt instanceof IfStmt) {
             var if_stmt = (IfStmt) stmt;
-
             Statement then_stmt = if_stmt.getThenStmt();
             var new_ctx = new CFGContext(node, ctx.cont, ctx.curLoopNode, ctx.contForCurLoopNode, ctx.methodExit);
             processStatement(then_stmt, new_ctx);
@@ -145,6 +144,8 @@ public class PDGBuilder {
             if (if_stmt.getElseStmt().isPresent()) {
                 Statement else_stmt = if_stmt.getElseStmt().get();
                 processStatement(else_stmt, new_ctx);
+            } else {
+                addControlEdge(node, ctx.cont);
             }
             return null;
         } else if (stmt instanceof WhileStmt) {
